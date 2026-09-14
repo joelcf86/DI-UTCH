@@ -21,10 +21,15 @@ CONFIGURACIÓN
 - Repositorio GitHub destino: joelcf86/DI-UTCH, rama main (sin PDF).
 - Curso Moodle: fullname "Dibujo para Ingeniería", shortname "AUDIJCF", idnumber "E-DI-1".
 - Identificadores del respaldo (sin colisiones): curso=2002, contextid_curso=20020,
-  registrar secciones: general=70101, unidades 70102..70104; course_module por Libro=
+  secciones: general (0)=70101 y unidades 70102..70104; course_module por Libro=
   80101..80103; book_id=2201..2203; contextid de módulos=90101..90103; enrol=25001..25003;
-  course_format_options desde 260001; capítulos: book 2201 desde 240000, 2202 desde 240020,
-  2203 desde 240040; backup_id=md5("DI"+fecha).
+  course_format_options de sección desde 260001 (260001..260020, 5 por sección) y gradebook
+  260101..260103; question_category "top" id=23001; capítulos: book 2201 desde 240000,
+  2202 desde 240020, 2203 desde 240040; backup_id=md5("DI"+fecha).
+- FORMATO DE FACHADA = respaldo real course-107 (DDP, 4.3.12) que restaura OK en la
+  plataforma; replicar su estructura al detalle (raíz con completion.xml, grade_history.xml
+  y gradebook.xml; questions.xml con categoría "top" con contextid; sección general 0 con
+  level 0 y firsttabtext "Índice"; hiddensections=0).
 - Sitio de restauración (Moodle 4.3.12, plataforma nueva):
   original_wwwroot https://moodlenuevo.utch.edu.mx  y  original_site_identifier_hash "manual"
   (al restaurar se mostrará aviso de origen distinto; se continúa normalmente).
@@ -61,19 +66,19 @@ ENTREGABLE 2 — Respaldo Moodle (.mbz) del curso completo, Moodle 4.3.12
 ================================================================
 Genera "Dibujo_para_Ingenieria.mbz" con la fachada de Moodle 4.3.12:
 
-1. moodle_backup.xml (raíz del tar): información con moodle_version 2023100900.12,
-   moodle_release "4.3.12", backup_version 2023100900, backup_release "4.3",
+1. moodle_backup.xml (raíz del tar): información con moodle_version 2023100912,
+   moodle_release "4.3.12 (Build: 20250414)", backup_version 2023100900, backup_release "4.3",
    original_wwwroot y original_site_identifier_hash según CONFIGURACIÓN,
    original_course_format onetopic; details/detail (type course, format moodle2);
-   contents con las secciones (general + 3 de unidad) y las actividades tipo book
-   con su directory; settings: root + una setting por sección
-   (section_<id>_included/userinfo) y por módulo (book_<id>_included/userinfo).
+contents con las secciones (1 general (0) + 3 de unidad) y las
+    actividades tipo book con su directory; settings: root + una setting por
+    sección (section_<id>_included/userinfo) y por módulo (book_<id>_included/userinfo).
 2. Por actividad (activities/book_<id>/):
    - module.xml: <module id version="2023100900"> con los campos de 4.3:
      modulename, sectionid, sectionnumber, idnumber, added, score, indent, visible,
      visibleoncoursepage, visibleold, groupmode, groupingid, completion,
      completiongradeitemnumber, completionview, completionexpected, availability,
-     showdescription, downloadcontent=0, lang (vacío), completionpassgrade=0,
+     showdescription, downloadcontent=0, lang=$@NULL@$, completionpassgrade=0,
      tags (vacío).
    - book.xml: raíz <activity id moduleid modulename contextid> -> <book id>: name,
      intro, introformat=1, numbering, navstyle, customtitles, timecreated,
@@ -81,22 +86,34 @@ Genera "Dibujo_para_Ingenieria.mbz" con la fachada de Moodle 4.3.12:
      correlativo desde 1, subchapter=0, title "<X.Y Z>", content=HTML escapado,
      contentformat=1, hidden=0, timemodified, importsrc vacío) y <chaptertags> vacío.
 3. course/course.xml: <course id contextid> con el conjunto de campos de 4.3
-   (incluye showactivitydates, showcompletionconditions, pdfexportfont vacío,
-   duplicateoptions "{}"), category, tags/customfields/courseformatoptions de
-   onetopic: 6 opciones para la sección general (coursedisplay=0, hiddensections=1,
-   hidetabsbar=0, tabsview=0, templatetopic=0, templatetopic_icons=0) y por sección
-   de unidad: bgcolor, cssstyles, firsttabtext=Índice, fontcolor, level=0.
+   (incluye showactivitydates, showcompletionconditions, pdfexportfont=$@NULL@$),
+   category (id=9, con <name> y <description>), tags/customfields/courseformatoptions
+   de onetopic a nivel curso:
+   8 opciones (coursedisplay=0, hiddensections=0, hidetabsbar=0, tabsview=0,
+   templatetopic=0, templatetopic_icons=0, usescourseindex=2,
+   usessectionsnavigation=0). No incluye duplicateoptions ni opciones por sección
+   en course.xml (esas van en section.xml, punto 4).
 4. sections/section_<id>/section.xml con availabilityjson
-   {"op":"&","c":[],"showc":[]} y course_format_options de onetopic (5 por sección
-   de unidad), igual que en el punto 3.
+   {"op":"&","c":[],"showc":[]} y course_format_options de onetopic (5 por sección:
+   bgcolor, cssstyles, firsttabtext, fontcolor, level). Primera sección = general 0
+   (section_70101, number 0, level 0, firsttabtext "Índice", bgcolor #1565C0);
+   unidades 70102..70104 (level 1) con bgcolor por unidad: #00897B (U1),
+   #6A1B9A (U2), #EF6C00 (U3).
 5. course/enrolments.xml: manual (status 0, roleid 5, expirythreshold 86400), guest
-   (status 1, roleid 0) y self (status 0, roleid 5, customint4=1, customint6=1).
-6. roles.xml con role id=5 student (archetype student). Auxiliares vacíos (con su tag
-   raíz, nunca auto-cerrados): files.xml, questions.xml, completion.xml, outcomes.xml,
-   scales.xml, grade_history.xml, gradebook.xml, groups.xml; y en course/: calendar.xml,
-   completiondefaults.xml, competencies.xml, filters.xml, roles.xml, contentbank.xml,
-   inforef.xml; por actividad: calendar.xml, competencies.xml, filters.xml, inforef.xml,
-   roles.xml, grade_history.xml, grades.xml.
+   (status 1, roleid 0) y self (status 0, roleid 5, expirythreshold 0, customint1=1,
+   customint4=1, customint6=1, customtext1 "Bienvenidos al Curso de Dibujo para
+   Ingeniería.", enrolperiod 10368000).
+6. roles.xml con role id=5 student (archetype student). En la raíz:
+   completion.xml (<course_completion></course_completion>), grade_history.xml y
+   gradebook.xml (con grade_category 260101, grade_item 260102 itemtype course y
+   grade_setting 260103 minmaxtouse=1) — SÍ se incluyen (formato course-107).
+   Auxiliares vacíos (con su tag raíz, nunca auto-cerrados): files.xml, outcomes.xml,
+   scales.xml, groups.xml; questions.xml NO vacío: lleva la categoría por defecto
+   "top" (id 23001) con contextid=20020, contextlevel 50, contextinstanceid=2002,
+   stamp y parent=0 (contextid en questions.xml es requisito del formato course-107).
+   En course/: calendar.xml, completiondefaults.xml, competencies.xml,
+   filters.xml, roles.xml, contentbank.xml, inforef.xml; por actividad: calendar.xml,
+   competencies.xml, filters.xml, inforef.xml, roles.xml, grade_history.xml, grades.xml.
 7. .ARCHIVE_INDEX (primera línea "Moodle archive file index. Count: N"; una línea por
    archivo "f" y por directorio "d" con "/" final), moodle_backup.log, tar formato GNU
    (typeflag '0', magic "ustar ", entradas de directorio typeflag '5' sin barra final)
@@ -130,8 +147,10 @@ VALIDACIÓN antes de entregar:
   - Abrir el .mbz como tar.gz: primer miembro .ARCHIVE_INDEX con Count coincidente y
     orden idéntico al índice; primeros 200 bytes de moodle_backup.xml detectados como
     formato moodle2 (declaración con comillas dobles + <moodle_backup> + <information>);
-    todos los XML bien formados; en moodle_backup.xml las 4 secciones y 3 activities;
-    <module> con el conjunto de campos de 4.3; ningún capítulo vacío.
+    todos los XML bien formados; en moodle_backup.xml las 4 secciones (general + 3
+    unidades) y 3 activities; <module> con el conjunto de campos de 4.3; ningún capítulo
+    vacío; questions.xml contiene la categoría "top" con contextid; raíz con
+    completion.xml, grade_history.xml y gradebook.xml.
 
 ENTREGA: (a) los .md publicados en joelcf86/DI-UTCH, (b)
 "Dibujo para Ingenieria/Dibujo_Moodle/Dibujo_para_Ingenieria.mbz" listo para

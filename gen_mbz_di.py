@@ -12,19 +12,25 @@ ENDDATE = STARTDATE + 14 * 7 * 86400
 
 course_id = 2002
 course_ctx = 20020
-sec_general = 70101
-sec_ids = [None, 70102, 70103, 70104]
+sec_ids = [70101, 70102, 70103, 70104]
+sec_num = [0, 1, 2, 3]
 mod_ids = [None, 80101, 80102, 80103]
 book_ids = [None, 2201, 2202, 2203]
 mod_ctxids = [None, 90101, 90102, 90103]
 enrol_ids = [25001, 25002, 25003]
 chapter_base = [None, 240000, 240020, 240040]
+sec_colors = {0: "#1565C0", 1: "#00897B", 2: "#6A1B9A", 3: "#EF6C00"}
 
 WWWROOT = "https://moodlenuevo.utch.edu.mx"
 SITE_HASH = "manual"
 FULLNAME = "Dibujo para Ingeniería"
 SHORTNAME = "AUDIJCF"
 IDNUMBER = "E-DI-1"
+
+MOODLE_VERSION = "2023100912"
+MOODLE_RELEASE = "4.3.12 (Build: 20250414)"
+BACKUP_VERSION = "2023100900"
+BACKUP_RELEASE = "4.3"
 
 UNITS = [
     {"num": 1, "name": "Fundamentos de dibujo en ingeniería", "s": 2, "p": 2,
@@ -230,19 +236,36 @@ def build_book_xml(unit):
         html = WRAPPER + '<h2 style="%s">%s</h2>' % (H2, esc_text(c["title"])) + body + "</div>"
         cid = chapter_base[n] + (pagenum - 1)
         chs.append(
-            "  <chapter id=\"%d\">\n<pagenum>%d</pagenum>\n<subchapter>0</subchapter>\n"
-            "<title>%s</title>\n<content>%s</content>\n<contentformat>1</contentformat>\n"
-            "<hidden>0</hidden>\n<timemodified>%d</timemodified>\n<importsrc></importsrc>\n  </chapter>"
+            "      <chapter id=\"%d\">\n"
+            "        <pagenum>%d</pagenum>\n"
+            "        <subchapter>0</subchapter>\n"
+            "        <title>%s</title>\n"
+            "        <content>%s</content>\n"
+            "        <contentformat>1</contentformat>\n"
+            "        <hidden>0</hidden>\n"
+            "        <timemodified>%d</timemodified>\n"
+            "        <importsrc></importsrc>\n"
+            "      </chapter>"
             % (cid, pagenum, esc_text(c["title"]), esc_text(html), TS))
         pagenum += 1
     intro = ("<p><strong>Unidad %d. %s</strong></p><p>Horas: %d h de teoría + %d h de práctica. "
              "En esta unidad el Libro contiene primero el <em>temario oficial</em> de la unidad "
              "y después un capítulo por cada tema desarrollado.</p>"
              % (n, unit["name"], unit["s"], unit["p"]))
-    book = ("<book id=\"%d\">\n<name>%s</name>\n<intro>%s</intro>\n<introformat>1</introformat>\n"
-            "<numbering>1</numbering>\n<navstyle>1</navstyle>\n<customtitles>0</customtitles>\n"
-            "<timecreated>%d</timecreated>\n<timemodified>%d</timemodified>\n<chapters>\n%s\n</chapters>\n</book>"
-            % (book_ids[n], esc_text("U%d. %s" % (n, unit["name"])), esc_text(intro), TS, TS, "\n".join(chs)))
+    book = (
+        "<book id=\"%d\">\n"
+        "  <name>%s</name>\n"
+        "  <intro>%s</intro>\n"
+        "  <introformat>1</introformat>\n"
+        "  <numbering>1</numbering>\n"
+        "  <navstyle>1</navstyle>\n"
+        "  <customtitles>0</customtitles>\n"
+        "  <timecreated>%d</timecreated>\n"
+        "  <timemodified>%d</timemodified>\n"
+        "  <chapters>\n%s\n  </chapters>\n"
+        "  <chaptertags>\n  </chaptertags>\n"
+        "</book>"
+        % (book_ids[n], esc_text("U%d. %s" % (n, unit["name"])), esc_text(intro), TS, TS, "\n".join(chs)))
     return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
             "<activity id=\"%d\" moduleid=\"%d\" modulename=\"book\" contextid=\"%d\">\n%s</activity>"
             % (book_ids[n], mod_ids[n], mod_ctxids[n], book))
@@ -263,14 +286,14 @@ def build_module_xml(n):
         "<groupingid>0</groupingid>",
         "<completion>0</completion>",
         "<completiongradeitemnumber>$@NULL@$</completiongradeitemnumber>",
-        "<completionview>0</completionview>",
         "<completionpassgrade>0</completionpassgrade>",
+        "<completionview>0</completionview>",
         "<completionexpected>0</completionexpected>",
         "<availability>$@NULL@$</availability>",
         "<showdescription>0</showdescription>",
-        "<downloadcontent>0</downloadcontent>",
-        "<lang></lang>",
-        "<tags></tags>",
+        "<downloadcontent>1</downloadcontent>",
+        "<lang>$@NULL@$</lang>",
+        "<tags>\n  </tags>",
     ]
     return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
             "<module id=\"%d\" version=\"2023100900\">\n%s\n</module>"
@@ -278,17 +301,12 @@ def build_module_xml(n):
 
 def build_course_xml():
     opts = []
-    gen_names = ["coursedisplay", "hiddensections", "hidetabsbar", "tabsview", "templatetopic", "templatetopic_icons"]
-    gen_vals = ["0", "1", "0", "0", "0", "0"]
-    for nm, v in zip(gen_names, gen_vals):
+    gen = [("coursedisplay", "0"), ("hiddensections", "0"), ("hidetabsbar", "0"),
+           ("tabsview", "0"), ("templatetopic", "0"), ("templatetopic_icons", "0"),
+           ("usescourseindex", "2"), ("usessectionsnavigation", "0")]
+    for nm, v in gen:
         opts.append("    <courseformatoption>\n      <format>onetopic</format>\n      <sectionid>0</sectionid>\n"
                     "      <name>%s</name>\n      <value>%s</value>\n    </courseformatoption>" % (nm, v))
-    for n in (1, 2, 3):
-        for nm in ("bgcolor", "cssstyles", "firsttabtext", "fontcolor", "level"):
-            v = "Índice" if nm == "firsttabtext" else ("0" if nm == "level" else "")
-            opts.append("    <courseformatoption>\n      <format>onetopic</format>\n      <sectionid>%d</sectionid>\n"
-                        "      <name>%s</name>\n      <value>%s</value>\n    </courseformatoption>"
-                        % (sec_ids[n], nm, v))
     summary = ("<h2>Dibujo para Ingeniería</h2><p>Curso del Área de Mecatrónica: fundamentos del dibujo "
                "técnico, modelado 2D/3D asistido por computadora y elaboración de planos normalizados.</p>"
                "<p><strong>Unidades:</strong> 3 | <strong>Duración:</strong> 45 h (15 teoría + 30 práctica).</p>"
@@ -301,11 +319,11 @@ def build_course_xml():
         "<summaryformat>1</summaryformat>",
         "<format>onetopic</format>",
         "<showgrades>1</showgrades>",
-        "<newsitems>0</newsitems>",
+        "<newsitems>5</newsitems>",
         "<startdate>%d</startdate>" % STARTDATE,
         "<enddate>%d</enddate>" % ENDDATE,
         "<marker>0</marker>",
-        "<maxbytes>0</maxbytes>",
+        "<maxbytes>20971520</maxbytes>",
         "<legacyfiles>0</legacyfiles>",
         "<showreports>0</showreports>",
         "<visible>1</visible>",
@@ -317,59 +335,59 @@ def build_course_xml():
         "<timecreated>%d</timecreated>" % TS,
         "<timemodified>%d</timemodified>" % TS,
         "<requested>0</requested>",
-        "<showactivitydates>1</showactivitydates>",
+        "<showactivitydates>0</showactivitydates>",
         "<showcompletionconditions>1</showcompletionconditions>",
+        "<pdfexportfont>$@NULL@$</pdfexportfont>",
         "<enablecompletion>1</enablecompletion>",
         "<completionnotify>0</completionnotify>",
-        "<pdfexportfont></pdfexportfont>",
-        "<duplicateoptions>{}</duplicateoptions>",
-        "<category id=\"9\">\n<name>Formación tecnológica</name>\n<description></description>\n</category>",
-        "<tags></tags>",
-        "<customfields></customfields>",
+        "<category id=\"9\">\n    <name>Formación tecnológica</name>\n    <description></description>\n  </category>",
+        "<tags>\n  </tags>",
+        "<customfields>\n  </customfields>",
         "<courseformatoptions>\n%s\n  </courseformatoptions>" % "\n".join(opts),
     ]
     return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
             "<course id=\"%d\" contextid=\"%d\">\n%s\n</course>" % (course_id, course_ctx, "\n".join(lines)))
 
-def build_section_xml(n):
+def build_section_xml(si):
+    name = "DIBUJO PARA INGENIERÍA" if si == 0 else "U%d. %s" % (si, UNITS[si - 1]["name"].upper())
+    seq = "" if si == 0 else "%d" % mod_ids[si]
+    summary = "" if si == 0 else ""
+    if si == 0:
+        summary = '&lt;h3 style="text-align: center;"&gt;&lt;br&gt;&lt;/h3&gt;'
     opts = []
     for k, nm in enumerate(("bgcolor", "cssstyles", "firsttabtext", "fontcolor", "level")):
-        v = "Índice" if nm == "firsttabtext" else ("0" if nm == "level" else "")
-        oid = 260000 + (n - 1) * 5 + 7 + k
+        if nm == "bgcolor":
+            v = sec_colors[si]
+        elif nm == "cssstyles":
+            v = ""
+        elif nm == "firsttabtext":
+            v = "Índice"
+        elif nm == "fontcolor":
+            v = "#FFF"
+        else:
+            v = "0" if si == 0 else "1"
+        oid = 260000 + si * 5 + k + 1
         opts.append("  <course_format_options id=\"%d\">\n    <format>onetopic</format>\n    <name>%s</name>\n"
                     "    <value>%s</value>\n  </course_format_options>" % (oid, nm, v))
     fields = [
-        "<number>%d</number>" % n,
-        "<name>%d. %s</name>" % (n, UNITS[n - 1]["name"]),
-        "<summary></summary>",
+        "<number>%d</number>" % sec_num[si],
+        "<name>%s</name>" % name,
+        "<summary>%s</summary>" % summary,
         "<summaryformat>1</summaryformat>",
-        "<sequence>%d</sequence>" % mod_ids[n],
+        "<sequence>%s</sequence>" % seq,
         "<visible>1</visible>",
         '<availabilityjson>{"op":"&amp;","c":[],"showc":[]}</availabilityjson>',
         "<timemodified>%d</timemodified>" % TS,
         "\n".join(opts),
     ]
-    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<section id=\"%d\">\n%s\n</section>" % (sec_ids[n], "\n".join(fields))
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<section id=\"%d\">\n%s\n</section>" % (sec_ids[si], "\n".join(fields))
 
-def build_section_general_xml():
-    fields = [
-        "<number>0</number>",
-        "<name>$@NULL@$</name>",
-        "<summary></summary>",
-        "<summaryformat>1</summaryformat>",
-        "<sequence></sequence>",
-        "<visible>1</visible>",
-        "<availabilityjson>$@NULL@$</availabilityjson>",
-        "<timemodified>%d</timemodified>" % TS,
-    ]
-    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<section id=\"%d\">\n%s\n</section>" % (sec_general, "\n".join(fields))
-
-def build_enrolment(eid, etype, status, roleid, threshold, custom4, custom6, password="$@NULL@$"):
+def build_enrolment(eid, etype, status, roleid, threshold, customints, name, password, customtext1="$@NULL@$", enrolperiod=0):
     rows = [
         "<enrol>%s</enrol>" % etype,
         "<status>%d</status>" % status,
-        "<name>$@NULL@$</name>",
-        "<enrolperiod>0</enrolperiod>",
+        "<name>%s</name>" % name,
+        "<enrolperiod>%d</enrolperiod>" % enrolperiod,
         "<enrolstartdate>0</enrolstartdate>",
         "<enrolenddate>0</enrolenddate>",
         "<expirynotify>0</expirynotify>",
@@ -380,26 +398,35 @@ def build_enrolment(eid, etype, status, roleid, threshold, custom4, custom6, pas
         "<currency>$@NULL@$</currency>",
         "<roleid>%d</roleid>" % roleid,
     ]
-    for i in range(1, 7):
-        v = "1" if (i == 4 and custom4) or (i == 6 and custom6) else "0"
+    for i in range(1, 9):
+        if customints is not None and i in customints:
+            v = customints[i]
+        elif customints is None:
+            v = "$@NULL@$"
+        elif i in (1, 2, 3, 4, 5, 6):
+            v = "0"
+        else:
+            v = "$@NULL@$"
         rows.append("<customint%d>%s</customint%d>" % (i, v, i))
-    rows.append("<customint7>$@NULL@$</customint7>")
-    rows.append("<customint8>$@NULL@$</customint8>")
     for i in range(1, 4):
         rows.append("<customchar%d>$@NULL@$</customchar%d>" % (i, i))
     rows.append("<customdec1>$@NULL@$</customdec1>")
     rows.append("<customdec2>$@NULL@$</customdec2>")
     for i in range(1, 5):
-        rows.append("<customtext%d>$@NULL@$</customtext%d>" % (i, i))
+        v = customtext1 if i == 1 else "$@NULL@$"
+        rows.append("<customtext%d>%s</customtext%d>" % (i, v, i))
     rows.append("<timecreated>%d</timecreated>" % TS)
     rows.append("<timemodified>%d</timemodified>" % TS)
-    rows.append("<user_enrolments></user_enrolments>")
+    rows.append("<user_enrolments>\n    </user_enrolments>")
     return "    <enrol id=\"%d\">\n%s\n    </enrol>" % (eid, "\n".join(rows))
 
 def build_enrolments_xml():
-    manual = build_enrolment(enrol_ids[0], "manual", 0, 5, 86400, False, False)
-    guest = build_enrolment(enrol_ids[1], "guest", 1, 0, 0, False, False, password="")
-    selfe = build_enrolment(enrol_ids[2], "self", 0, 5, 86400, True, True)
+    manual = build_enrolment(enrol_ids[0], "manual", 0, 5, 86400, None, name="$@NULL@$", password="$@NULL@$")
+    guest = build_enrolment(enrol_ids[1], "guest", 1, 0, 0, None, name="$@NULL@$", password="")
+    selfe = build_enrolment(enrol_ids[2], "self", 0, 5, 0,
+                            {1: "1", 2: "0", 3: "0", 4: "1", 5: "0", 6: "1"},
+                            name="", password="$@NULL@$",
+                            customtext1="Bienvenidos al Curso de Dibujo para Ingeniería.", enrolperiod=10368000)
     return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<enrolments>\n  <enrols>\n%s\n%s\n%s\n"
             "  </enrols>\n</enrolments>" % (manual, guest, selfe))
 
@@ -410,16 +437,84 @@ def build_roles_definition_xml():
     return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<roles_definition>\n%s\n</roles_definition>" % inner
 
 def build_roles_xml():
-    return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<roles>\n  <role_overrides></role_overrides>\n"
-            "  <role_assignments></role_assignments>\n</roles>")
+    return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<roles>\n  <role_overrides>\n  </role_overrides>\n"
+            "  <role_assignments>\n  </role_assignments>\n</roles>")
 
 def aux(tag, inner=""):
     return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<%s>%s</%s>" % (tag, inner, tag)
 
+def build_groups_xml():
+    return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<groups>\n"
+            "  <groupcustomfields>\n  </groupcustomfields>\n"
+            "  <groupings>\n    <groupingcustomfields>\n    </groupingcustomfields>\n  </groupings>\n</groups>")
+
 def build_course_inforef():
     return aux("inforef",
-               "\n  <groupref></groupref>\n  <roleref>\n    <role>\n      <id>5</id>\n    </role>\n  </roleref>\n"
-               "  <question_categoryref></question_categoryref>")
+               "\n  <groupref>\n  </groupref>\n  <roleref>\n    <role>\n      <id>5</id>\n    </role>\n  </roleref>\n"
+               "  <question_categoryref>\n  </question_categoryref>")
+
+def build_gradebook_xml():
+    inner = (
+        "  <attributes>\n  </attributes>\n"
+        "  <grade_categories>\n"
+        "    <grade_category id=\"260101\">\n"
+        "      <parent>$@NULL@$</parent>\n"
+        "      <depth>1</depth>\n"
+        "      <path>/260101/</path>\n"
+        "      <fullname>?</fullname>\n"
+        "      <aggregation>13</aggregation>\n"
+        "      <keephigh>0</keephigh>\n"
+        "      <droplow>0</droplow>\n"
+        "      <aggregateonlygraded>1</aggregateonlygraded>\n"
+        "      <aggregateoutcomes>0</aggregateoutcomes>\n"
+        "      <timecreated>%d</timecreated>\n"
+        "      <timemodified>%d</timemodified>\n"
+        "      <hidden>0</hidden>\n"
+        "    </grade_category>\n"
+        "  </grade_categories>\n"
+        "  <grade_items>\n"
+        "    <grade_item id=\"260102\">\n"
+        "      <categoryid>$@NULL@$</categoryid>\n"
+        "      <itemname>$@NULL@$</itemname>\n"
+        "      <itemtype>course</itemtype>\n"
+        "      <itemmodule>$@NULL@$</itemmodule>\n"
+        "      <iteminstance>260101</iteminstance>\n"
+        "      <itemnumber>$@NULL@$</itemnumber>\n"
+        "      <iteminfo>$@NULL@$</iteminfo>\n"
+        "      <idnumber>$@NULL@$</idnumber>\n"
+        "      <calculation>$@NULL@$</calculation>\n"
+        "      <gradetype>1</gradetype>\n"
+        "      <grademax>0.00000</grademax>\n"
+        "      <grademin>0.00000</grademin>\n"
+        "      <scaleid>$@NULL@$</scaleid>\n"
+        "      <outcomeid>$@NULL@$</outcomeid>\n"
+        "      <gradepass>0.00000</gradepass>\n"
+        "      <multfactor>1.00000</multfactor>\n"
+        "      <plusfactor>0.00000</plusfactor>\n"
+        "      <aggregationcoef>0.00000</aggregationcoef>\n"
+        "      <aggregationcoef2>0.00000</aggregationcoef2>\n"
+        "      <weightoverride>0</weightoverride>\n"
+        "      <sortorder>1</sortorder>\n"
+        "      <display>0</display>\n"
+        "      <decimals>$@NULL@$</decimals>\n"
+        "      <hidden>0</hidden>\n"
+        "      <locked>0</locked>\n"
+        "      <locktime>0</locktime>\n"
+        "      <needsupdate>0</needsupdate>\n"
+        "      <timecreated>%d</timecreated>\n"
+        "      <timemodified>%d</timemodified>\n"
+        "      <grade_grades>\n      </grade_grades>\n"
+        "    </grade_item>\n"
+        "  </grade_items>\n"
+        "  <grade_letters>\n  </grade_letters>\n"
+        "  <grade_settings>\n"
+        "    <grade_setting id=\"260103\">\n"
+        "      <name>minmaxtouse</name>\n"
+        "      <value>1</value>\n"
+        "    </grade_setting>\n"
+        "  </grade_settings>"
+        % (TS, TS, TS, TS))
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gradebook>\n%s\n</gradebook>" % inner
 
 def build_moodle_backup_xml():
     acts = []
@@ -429,26 +524,29 @@ def build_moodle_backup_xml():
             "          <modulename>book</modulename>\n          <title>%s</title>\n"
             "          <directory>activities/book_%d</directory>\n        </activity>"
             % (mod_ids[n], sec_ids[n], esc_text("U%d. %s" % (n, UNITS[n - 1]["name"])), mod_ids[n]))
-    secs = ["        <section>\n          <sectionid>%d</sectionid>\n          <title>0</title>\n"
-            "          <directory>sections/section_%d</directory>\n        </section>" % (sec_general, sec_general)]
-    for n in (1, 2, 3):
+    secs = []
+    for si in range(4):
+        if si == 0:
+            title = "DIBUJO PARA INGENIERÍA"
+        else:
+            title = "U%d. %s" % (si, UNITS[si - 1]["name"])
         secs.append("        <section>\n          <sectionid>%d</sectionid>\n"
-                    "          <title>%d. %s</title>\n          <directory>sections/section_%d</directory>\n"
-                    "        </section>" % (sec_ids[n], n, esc_text(UNITS[n - 1]["name"]), sec_ids[n]))
+                    "          <title>%s</title>\n          <directory>sections/section_%d</directory>\n"
+                    "        </section>" % (sec_ids[si], esc_text(title), sec_ids[si]))
     root_settings = [
         ("filename", MBZ_NAME), ("imscc11", "0"), ("users", "0"), ("anonymize", "0"),
         ("role_assignments", "0"), ("activities", "1"), ("blocks", "1"), ("files", "1"),
         ("filters", "1"), ("comments", "0"), ("badges", "0"), ("calendarevents", "1"),
         ("userscompletion", "0"), ("logs", "0"), ("grade_histories", "0"), ("questionbank", "1"),
         ("groups", "1"), ("competencies", "1"), ("customfield", "1"), ("contentbankcontent", "1"),
-        ("legacyfiles", "1"),
+        ("xapistate", "0"), ("legacyfiles", "1"),
     ]
     settings = []
     for nm, v in root_settings:
         settings.append('      <setting>\n        <level>root</level>\n        <name>%s</name>\n'
                         "        <value>%s</value>\n      </setting>" % (nm, v))
-    secdirs = ["section_%d" % sec_general] + ["section_%d" % sec_ids[n] for n in (1, 2, 3)]
-    for sd in secdirs:
+    for si in range(4):
+        sd = "section_%d" % sec_ids[si]
         settings.append('      <setting>\n        <level>section</level>\n        <section>%s</section>\n'
                         "        <name>%s_included</name>\n        <value>1</value>\n      </setting>" % (sd, sd))
         settings.append('      <setting>\n        <level>section</level>\n        <section>%s</section>\n'
@@ -461,10 +559,10 @@ def build_moodle_backup_xml():
                         "        <name>%s_userinfo</name>\n        <value>0</value>\n      </setting>" % (ad, ad))
     info = "\n".join([
         "<name>%s</name>" % MBZ_NAME,
-        "<moodle_version>2023100900.12</moodle_version>",
-        "<moodle_release>4.3.12</moodle_release>",
-        "<backup_version>2023100900</backup_version>",
-        "<backup_release>4.3</backup_release>",
+        "<moodle_version>%s</moodle_version>" % MOODLE_VERSION,
+        "<moodle_release>%s</moodle_release>" % MOODLE_RELEASE,
+        "<backup_version>%s</backup_version>" % BACKUP_VERSION,
+        "<backup_release>%s</backup_release>" % BACKUP_RELEASE,
         "<backup_date>%d</backup_date>" % TS,
         "<mnet_remoteusers>0</mnet_remoteusers>",
         "<include_files>1</include_files>",
@@ -492,20 +590,11 @@ def build_moodle_backup_xml():
             "  <settings>\n%s\n  </settings>\n</moodle_backup>"
             % (info, detail, contents, "\n".join(settings)))
 
-def build_log():
-    stamp = time.strftime("%a %b %d %H:%M:%S %Y")
-    lines = [
-        "[%s] [info] instantiating backup controller %s" % (stamp, BACKUP_ID),
-        "[%s] [debug] setting controller status to 100" % stamp,
-        "[%s] [debug] loading controller plan" % stamp,
-        "[%s] [debug] setting controller status to 300" % stamp,
-        "[%s] [debug] applying plan defaults" % stamp,
-        "[%s] [debug] setting controller status to 400" % stamp,
-        "[%s] [info] checking plan security" % stamp,
-        "[%s] [debug] setting controller status to 500" % stamp,
-        "[%s] [debug] saving controller to db" % stamp,
-    ]
-    return "\n".join(lines) + "\n"
+def build_completion_xml():
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<course_completion>\n</course_completion>"
+
+def build_grade_history_xml():
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<grade_history>\n  <grade_grades>\n  </grade_grades>\n</grade_history>"
 
 def main():
     books = {}
@@ -513,43 +602,31 @@ def main():
         books[n] = build_book_xml(UNITS[n - 1])
 
     files = {}
+    # Orden exacto del respaldo real 4.3.12: grade_history, module, activity, competencies, calendar, inforef, grades, roles, filters
+    ACT_FILES = ["grade_history.xml", "module.xml", "book.xml", "competencies.xml",
+                 "calendar.xml", "inforef.xml", "grades.xml", "roles.xml", "filters.xml"]
     for n in (1, 2, 3):
         d = "activities/book_%d" % mod_ids[n]
-        files[d + "/book.xml"] = books[n]
-        files[d + "/calendar.xml"] = aux("events")
-        files[d + "/competencies.xml"] = aux("course_module_competencies", "\n  <competencies></competencies>")
-        files[d + "/filters.xml"] = aux("filters", "\n  <filter_actives></filter_actives>\n  <filter_configs></filter_configs>")
-        files[d + "/grade_history.xml"] = aux("grade_history", "\n  <grade_grades></grade_grades>")
-        files[d + "/grades.xml"] = aux("activity_gradebook", "\n  <grade_items></grade_items>\n  <grade_letters></grade_letters>")
-        files[d + "/inforef.xml"] = aux("inforef")
+        files[d + "/grade_history.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<grade_history>\n  <grade_grades>\n  </grade_grades>\n</grade_history>"
         files[d + "/module.xml"] = build_module_xml(n)
+        files[d + "/book.xml"] = books[n]
+        files[d + "/competencies.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<course_module_competencies>\n  <competencies>\n  </competencies>\n</course_module_competencies>"
+        files[d + "/calendar.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<events>\n</events>"
+        files[d + "/inforef.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<inforef>\n</inforef>"
+        files[d + "/grades.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<activity_gradebook>\n  <grade_items>\n  </grade_items>\n  <grade_letters>\n  </grade_letters>\n</activity_gradebook>"
         files[d + "/roles.xml"] = build_roles_xml()
+        files[d + "/filters.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<filters>\n  <filter_actives>\n  </filter_actives>\n  <filter_configs>\n  </filter_configs>\n</filters>"
 
     course_files = [
-        ("calendar.xml", aux("events")),
-        ("competencies.xml", aux("course_competencies", "\n  <competencies></competencies>\n  <user_competencies></user_competencies>")),
-        ("completiondefaults.xml", aux("course_completion_defaults")),
-        ("contentbank.xml", aux("contents")),
         ("course.xml", build_course_xml()),
         ("enrolments.xml", build_enrolments_xml()),
-        ("filters.xml", aux("filters", "\n  <filter_actives></filter_actives>\n  <filter_configs></filter_configs>")),
+        ("competencies.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<course_competencies>\n  <competencies>\n  </competencies>\n  <user_competencies>\n  </user_competencies>\n</course_competencies>"),
+        ("calendar.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<events>\n</events>"),
         ("inforef.xml", build_course_inforef()),
+        ("contentbank.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<contents>\n</contents>"),
         ("roles.xml", build_roles_xml()),
-    ]
-    root_files = [
-        ("completion.xml", aux("course_completion")),
-        ("files.xml", aux("files")),
-        ("grade_history.xml", aux("grade_history", "\n  <grade_grades></grade_grades>")),
-        ("gradebook.xml", aux("gradebook", "\n  <attributes></attributes>\n  <grade_categories></grade_categories>\n"
-                                           "  <grade_items></grade_items>\n  <grade_letters></grade_letters>\n"
-                                           "  <grade_settings></grade_settings>")),
-        ("groups.xml", aux("groups")),
-        ("moodle_backup.log", build_log()),
-        ("moodle_backup.xml", build_moodle_backup_xml()),
-        ("outcomes.xml", aux("outcomes_definition")),
-        ("questions.xml", aux("question_categories")),
-        ("roles.xml", build_roles_definition_xml()),
-        ("scales.xml", aux("scales_definition")),
+        ("completiondefaults.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<course_completion_defaults>\n</course_completion_defaults>"),
+        ("filters.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<filters>\n  <filter_actives>\n  </filter_actives>\n  <filter_configs>\n  </filter_configs>\n</filters>"),
     ]
 
     if os.path.exists(OUT_ROOT):
@@ -560,34 +637,59 @@ def main():
     for n in (1, 2, 3):
         d = "activities/book_%d" % mod_ids[n]
         order.append((d, True))
-        for name in ["book.xml", "calendar.xml", "competencies.xml", "filters.xml",
-                     "grade_history.xml", "grades.xml", "inforef.xml", "module.xml", "roles.xml"]:
+        for name in ACT_FILES:
             order.append((d + "/" + name, False))
-    for name, content in root_files:
-        files[name] = content
-        order.append((name, False))
+    order.append(("completion.xml", False))
+    files["completion.xml"] = build_completion_xml()
     order.append(("course", True))
     for name, content in course_files:
         files["course/" + name] = content
         order.append(("course/" + name, False))
+    for name in ["files.xml", "grade_history.xml", "gradebook.xml", "groups.xml",
+                 "moodle_backup.xml", "outcomes.xml", "questions.xml", "roles.xml", "scales.xml"]:
+        order.append((name, False))
+    files["files.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<files>\n</files>"
+    files["grade_history.xml"] = build_grade_history_xml()
+    files["gradebook.xml"] = build_gradebook_xml()
+    files["groups.xml"] = build_groups_xml()
+    files["moodle_backup.xml"] = build_moodle_backup_xml()
+    files["outcomes.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<outcomes_definition>\n</outcomes_definition>"
+    files["questions.xml"] = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                              "<question_categories>\n"
+                              "  <question_category id=\"23001\">\n"
+                              "    <name>top</name>\n"
+                              "    <contextid>%d</contextid>\n"
+                              "    <contextlevel>50</contextlevel>\n"
+                              "    <contextinstanceid>%d</contextinstanceid>\n"
+                              "    <info></info>\n"
+                              "    <infoformat>0</infoformat>\n"
+                              "    <stamp>moodlenuevo.utch.edu.mx+260901000000+manual</stamp>\n"
+                              "    <parent>0</parent>\n"
+                              "    <sortorder>0</sortorder>\n"
+                              "    <idnumber>$@NULL@$</idnumber>\n"
+                              "    <question_bank_entries>\n"
+                              "    </question_bank_entries>\n"
+                              "  </question_category>\n"
+                              "</question_categories>") % (course_ctx, course_id)
+    files["roles.xml"] = build_roles_definition_xml()
+    files["scales.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<scales_definition>\n</scales_definition>"
     order.append(("sections", True))
-    for sid in [sec_general] + [sec_ids[n] for n in (1, 2, 3)]:
-        d = "sections/section_%d" % sid
+    for si in range(4):
+        d = "sections/section_%d" % sec_ids[si]
         order.append((d, True))
-        files[d + "/inforef.xml"] = aux("inforef")
-        files[d + "/section.xml"] = (build_section_general_xml() if sid == sec_general
-                                     else build_section_xml(UNITS.index(next(u for u in UNITS if sec_ids[u["num"]] == sid)) + 1))
+        files[d + "/inforef.xml"] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<inforef>\n</inforef>"
+        files[d + "/section.xml"] = build_section_xml(si)
         order.append((d + "/inforef.xml", False))
         order.append((d + "/section.xml", False))
+    files["moodle_backup.log"] = ""
+    order.append(("moodle_backup.log", False))
 
     index_lines = ["Moodle archive file index. Count: %d" % len(order)]
-    sizes = {}
     for path, is_dir in order:
         if is_dir:
             index_lines.append("%s/\td\t0\t?" % path)
         else:
             data = files[path].encode("utf-8")
-            sizes[path] = data
             index_lines.append("%s\tf\t%d\t%d" % (path, len(data), TS))
     index_data = ("\n".join(index_lines) + "\n").encode("utf-8")
 
